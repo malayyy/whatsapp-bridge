@@ -1,14 +1,12 @@
-import axios from 'axios';
-
 export default async function handler(req, res) {
-  // 1. VERIFICATION REQUEST (GET) - Ye wahi hai jo Meta verify karta hai
+  // 1. VERIFICATION REQUEST (GET)
   if (req.method === 'GET') {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
     if (mode && token) {
-      if (mode === 'subscribe' && token === 'rrp123') { // Tera Token 'rrp123'
+      if (mode === 'subscribe' && token === 'rrp123') {
         console.log('WEBHOOK_VERIFIED');
         return res.status(200).send(challenge);
       } else {
@@ -17,7 +15,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // 2. INCOMING MESSAGE (POST) - Ye hai asli kaam
+  // 2. INCOMING MESSAGE (POST)
   if (req.method === 'POST') {
     try {
       const body = req.body;
@@ -31,17 +29,16 @@ export default async function handler(req, res) {
           body.entry[0].changes[0].value.messages &&
           body.entry[0].changes[0].value.messages[0]
         ) {
-          // --- EXTRACT DATA (Safai Abhiyan) ---
+          // --- EXTRACT DATA ---
           const value = body.entry[0].changes[0].value;
           const message = value.messages[0];
           
-          // Data nikaalo
-          const phone = message.from; // Sender Number
-          const text = message.text ? message.text.body : "Media/Other"; // Message Text
-          const channelID = value.metadata.phone_number_id; // Kis number pe aaya
+          const phone = message.from; 
+          const text = message.text ? message.text.body : "Media/Other"; 
+          const channelID = value.metadata.phone_number_id; 
           const timestamp = message.timestamp;
 
-          // --- PREPARE CLEAN PAYLOAD FOR ZOHO ---
+          // --- PREPARE PAYLOAD ---
           const zohoPayload = {
             phone: phone,
             text: text,
@@ -51,13 +48,25 @@ export default async function handler(req, res) {
 
           console.log('Sending to Zoho:', zohoPayload);
 
-          // --- SEND TO ZOHO WEBHOOK ---
-          // Yahan apni ZOHO WEBHOOK URL daal dena (API Key mat bhoolna agar hai to)
-          // Example URL: https://crm.zoho.in/crm/v7/functions/WhatsApp_Incoming_Webhook/actions/execute?auth_type=apikey&zapikey=...
-          
+          // --- SEND TO ZOHO (USING FETCH INSTEAD OF AXIOS) ---
           const zohoUrl = 'https://www.zohoapis.in/crm/v7/functions/whatsapp_incoming_webhook/actions/execute?auth_type=apikey&zapikey=1003.1bdd5ee3d2423e59f12acc74b399a06b.3808e22628d76ba68d06e0b6524c98ac'; 
 
-          await axios.post(zohoUrl, zohoPayload);
+          // Native Fetch Call (No Install Required)
+          const response = await fetch(zohoUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(zohoPayload)
+          });
+
+          // Check Zoho Response
+          if (!response.ok) {
+             const errorText = await response.text();
+             console.error('Zoho Error:', errorText);
+          } else {
+             console.log('Zoho Success:', await response.text());
+          }
           
           return res.status(200).send('EVENT_RECEIVED');
         }
@@ -67,7 +76,7 @@ export default async function handler(req, res) {
 
     } catch (error) {
       console.error('Error forwarding to Zoho:', error.message);
-      return res.status(500).send('Server Error');
+      return res.status(500).send('Server Error: ' + error.message);
     }
   }
 
