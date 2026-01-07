@@ -1,39 +1,35 @@
-export default async function handler(req, res) {
-  // 1. VERIFICATION (GET) - One Line
-  if (req.method === 'GET') return res.status(200).send(req.query['hub.challenge']);
+const axios = require('axios');
 
-  // 2. INCOMING MESSAGE (POST)
-  if (req.method === 'POST') {
-    try {
-      // Data Extract (Safely)
-      const value = req.body?.entry?.[0]?.changes?.[0]?.value;
-      const msg = value?.messages?.[0];
+// Tera URL (As requested)
+const ZOHO_URL = "https://www.zohoapis.in/crm/v7/functions/whatsapp_incoming_webhook/actions/execute?auth_type=apikey&zapikey=1003.1bdd5ee3d2423e59f12acc74b399a06b.3808e22628d76ba68d06e0b6524c98ac";
 
-      // Agar message nahi hai to ignore karo
-      if (!msg) return res.status(200).send('No message');
+module.exports = async (req, res) => {
+    
+    // 1. META VERIFICATION (GET)
+    if (req.method === 'GET') {
+        const challenge = req.query['hub.challenge'];
+        if (challenge) {
+            // Meta ko Plain Text chahiye, ye wahi dega
+            res.status(200).send(challenge);
+        } else {
+            res.status(403).send('No challenge found');
+        }
+    } 
 
-      // Clean Payload create karo
-      const payload = {
-        phone: msg.from,
-        text: msg.text?.body || "Media/Other",
-        channel_id: value.metadata?.phone_number_id
-      };
-
-      // 🛑 YE RAHA LOG - Isse tu Vercel Logs me Data dekh payega
-      console.log("🚀 SENDING TO ZOHO:", JSON.stringify(payload, null, 2));
-
-      // 🚀 SENDING TO ZOHO (Via URL Param to prevent NULL)
-      const zohoBase = "https://www.zohoapis.in/crm/v7/functions/whatsapp_incoming_webhook/actions/execute?auth_type=apikey&zapikey=1003.1bdd5ee3d2423e59f12acc74b399a06b.3808e22628d76ba68d06e0b6524c98ac";
-      
-      // Data ko string bana ke URL me jod diya. 100% Success Rate.
-      await fetch(`${zohoBase}&arg=${encodeURIComponent(JSON.stringify(payload))}`, { 
-          method: 'POST' 
-      });
-
-      return res.status(200).send('Sent');
-    } catch (e) {
-      console.error("❌ ERROR:", e.message);
-      return res.status(500).send('Error');
+    // 2. FORWARD MESSAGE (POST)
+    else if (req.method === 'POST') {
+        try {
+            // Seedha Zoho ko forward
+            await axios.post(ZOHO_URL, req.body);
+            res.status(200).send('EVENT_RECEIVED');
+        } catch (error) {
+            // Error aaya toh bhi Meta ko 200 bhejo taaki wo retry na kare
+            console.error(error.message);
+            res.status(200).send('Forwarded with error');
+        }
+    } 
+    
+    else {
+        res.status(405).send('Method Not Allowed');
     }
-  }
-}
+};
