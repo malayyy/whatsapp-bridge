@@ -1,4 +1,3 @@
-// api/index.js
 export default async function handler(req, res) {
   
   // 1. VERIFICATION (GET)
@@ -20,13 +19,15 @@ export default async function handler(req, res) {
     try {
       const body = req.body;
 
+      // Check for Message
       if (
         body.entry &&
         body.entry[0].changes &&
         body.entry[0].changes[0].value.messages &&
         body.entry[0].changes[0].value.messages[0]
       ) {
-        // --- DATA EXTRACT ---
+        
+        // --- CLEAN DATA ---
         const value = body.entry[0].changes[0].value;
         const message = value.messages[0];
 
@@ -37,24 +38,19 @@ export default async function handler(req, res) {
             timestamp: message.timestamp
         };
 
-        // 🔥 NUCLEAR FIX: URL ENCODING 🔥
-        // Body se bhejne pe Zoho nakhre kar raha hai.
-        // Hum data ko String bana ke URL me chipka denge via '?arg='
-        const jsonString = JSON.stringify(cleanPayload);
-        const encodedData = encodeURIComponent(jsonString);
+        // 🔥 THE FIX: Send as FORM DATA (x-www-form-urlencoded) 🔥
+        // Zoho loves this format. No complex JSON wrapping manually.
+        const params = new URLSearchParams();
+        params.append('arg', JSON.stringify(cleanPayload)); // Data ko 'arg' bucket mein daal diya
 
-        // Base URL
-        const baseUrl = "https://www.zohoapis.in/crm/v7/functions/whatsapp_incoming_webhook/actions/execute?auth_type=apikey&zapikey=1003.1bdd5ee3d2423e59f12acc74b399a06b.3808e22628d76ba68d06e0b6524c98ac";
-        
-        // Final URL with Argument
-        const finalUrl = `${baseUrl}&arg=${encodedData}`;
+        console.log('Sending Form Data to Zoho:', cleanPayload);
 
-        console.log('Sending via URL Param:', finalUrl);
+        const zohoUrl = "https://www.zohoapis.in/crm/v7/functions/whatsapp_incoming_webhook/actions/execute?auth_type=apikey&zapikey=1003.1bdd5ee3d2423e59f12acc74b399a06b.3808e22628d76ba68d06e0b6524c98ac";
 
-        // Native Fetch (Empty Body, Data in URL)
-        await fetch(finalUrl, {
+        // Native Fetch
+        await fetch(zohoUrl, {
             method: 'POST',
-            headers: { 'Content-Length': '0' } 
+            body: params // Headers auto-set ho jayenge
         });
 
         return res.status(200).send('EVENT_RECEIVED');
