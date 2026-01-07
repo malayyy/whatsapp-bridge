@@ -23,6 +23,8 @@ module.exports = async (req, res) => {
             await axios.post(ZOHO_URL, req.body);
             res.status(200).send('EVENT_RECEIVED');
         } catch (error) {
+
+            await axios.post(ZOHO_URL, "Error aagyi");
             // Error aaya toh bhi Meta ko 200 bhejo taaki wo retry na kare
             console.error(error.message);
             res.status(200).send('Forwarded with error');
