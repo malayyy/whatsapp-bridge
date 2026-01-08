@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 // Tera URL (As requested)
-const ZOHO_URL = "https://www.zohoapis.in/crm/v7/functions/whatsapp_incoming_webhook/actions/execute?auth_type=apikey&zapikey=1003.1bdd5ee3d2423e59f12acc74b399a06b.3808e22628d76ba68d06e0b6524c98ac";
+const ZOHO_URL = "https://www.zohoapis.in/crm/v7/functions/whatsappincominghook2/actions/execute?auth_type=apikey&zapikey=1003.1bdd5ee3d2423e59f12acc74b399a06b.3808e22628d76ba68d06e0b6524c98ac";
 
 module.exports = async (req, res) => {
     
